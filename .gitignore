@@ -16,7 +16,8 @@ dist-ssr
 client/node_modules
 client/dist
 client/dist-ssr
-
+client/package-lock.json
+package-lock.json
 # Editor directories and files
 .vscode/*
 !.vscode/extensions.json
