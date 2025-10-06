@@ -10,11 +10,11 @@ import {
   MapPin,
   Clock,
   Send,
-  CheckCircle,
-  ChevronDown
+  ChevronDown,
+  Paperclip 
 } from "lucide-react";
 
-import supportImage from "@/assets/support-character.png"; // replace with uploaded PNG path
+import supportImage from "@/assets/support-character.png";
 
 const Contact = () => {
   const { toast } = useToast();
@@ -27,24 +27,56 @@ const Contact = () => {
     budget: "",
     message: ""
   });
-
+  const [file, setFile] = useState<File | null>(null); 
+  const [sending, setSending] = useState(false);
+  const [timer, setTimer] = useState(0);
   const [openFAQ, setOpenFAQ] = useState<number | null>(null);
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    toast({
-      title: "Message Sent Successfully!",
-      description: "Thank you for reaching out. Our team will respond within 24 hours.",
-    });
-    setFormData({
-      name: "",
-      email: "",
-      phone: "",
-      company: "",
-      service: "",
-      budget: "",
-      message: ""
-    });
+
+    if (!formData.name || !formData.email || !formData.message) {
+      toast({ title: "Missing fields", description: "Please provide your name, email, and message." });
+      return;
+    }
+
+    try {
+      setSending(true);
+
+      let sendingTime = 16; 
+      setTimer(sendingTime);
+
+      const countdown = setInterval(() => {
+        sendingTime -= 1;
+        setTimer(sendingTime);
+        if (sendingTime <= 0) clearInterval(countdown);
+      }, 1000);
+
+      const data = new FormData();
+      Object.entries(formData).forEach(([key, value]) => data.append(key, value));
+      if (file) data.append("file", file);
+
+      const res = await fetch(`${import.meta.env.VITE_API_BASE}/api/contact`, {
+        method: "POST",
+        body: data,
+      });
+
+      const json = await res.json();
+
+      if (res.ok && json.ok) {
+        toast({ title: "Message Sent Successfully!", description: "Our team will respond within 24 hours." });
+        setFormData({ name: "", email: "", phone: "", company: "", service: "", budget: "", message: "" });
+        setFile(null);
+      } else {
+        toast({ title: "Failed to send", description: json?.error || "Unexpected error. Try again later." });
+      }
+    } catch (err) {
+      console.error(err);
+      toast({ title: "Network error", description: "Couldn't send message. Check your connection or try again later." });
+    } finally {
+      setSending(false);
+      setTimer(0);
+    }
   };
 
   const handleChange = (field: string, value: string) => {
@@ -52,10 +84,10 @@ const Contact = () => {
   };
 
   const contactInfo = [
-    { icon: Mail, title: "Email Us", content: "hello@freakbirds.com", description: "Send us your queries anytime." },
-    { icon: Phone, title: "Call Us", content: "+91 9952491705", description: "Mon-Fri 9AM-6PM EST." },
+    { icon: Mail, title: "Email Us", content: "Hello@freakbirds.com", description: "Send us your queries anytime." },
+    { icon: Phone, title: "Call Us", content: "+91 9952491705", description: "Mon-Fri 9AM-6PM IST." },
     { icon: MapPin, title: "Visit Us", content: "Global services, India", description: "Head office address." },
-    { icon: Clock, title: "Business Hours", content: "Mon - Fri: 9AM - 6PM EST", description: "Weekend support available." }
+    { icon: Clock, title: "Business Hours", content: "Mon - Fri: 9AM - 6PM IST", description: "Weekend support available." }
   ];
 
   const services = [
@@ -98,12 +130,13 @@ const Contact = () => {
             <p className="text-lg lg:text-xl text-white/90 max-w-xl mx-auto lg:mx-0">
               Connect with <strong>Freakbirds Digital</strong>, your trusted partner for web, mobile, AI, branding, and business solutions. Our experts deliver results-driven strategies to grow your business online.
             </p>
-            {/* Call button on mobile */}
-            <a href="tel:+919952491705" className="inline-block">
+            <div className="pt-4">
+            <a href="tel:+919952491705">
               <Button size="lg" className="font-semibold shadow-lg bg-yellow-400 text-[#031273] hover:bg-yellow-500">
                 <Phone className="w-5 h-5 mr-2" /> Talk to an Expert
               </Button>
             </a>
+            </div>
           </div>
           <div className="flex justify-center lg:justify-end animate-slide-up">
             <img src={supportImage} alt="Customer Support" className="max-w-md w-full" />
@@ -149,8 +182,23 @@ const Contact = () => {
                 </Select>
               </div>
               <Textarea placeholder="Project Details *" value={formData.message} onChange={(e) => handleChange("message", e.target.value)} required rows={6} />
-              <Button type="submit" size="lg" className="w-full bg-yellow-400 text-[#031273] hover:bg-yellow-500 shadow-lg">
-                <Send className="w-5 h-5 mr-2" /> Send Message
+
+              {/* File Attachment */}
+              <div className="flex flex-col gap-2">
+                <label className="font-medium text-foreground flex items-center gap-2">
+                  <Paperclip className="w-4 h-4" /> Attach Requirement Document
+                </label>
+                <Input
+                  type="file"
+                  accept=".pdf,.doc,.docx,.png,.jpg,.jpeg"
+                  onChange={(e) => setFile(e.target.files?.[0] || null)}
+                />
+                {file && <p className="text-sm text-muted-foreground">Selected: <span className="font-medium">{file.name}</span></p>}
+              </div>
+
+              {/* Send Button */}
+              <Button type="submit" size="lg" className="w-full bg-yellow-400 text-[#031273] hover:bg-yellow-500 shadow-lg" disabled={sending}>
+                <Send className="w-5 h-5 mr-2" /> {sending ? `Sending... ${timer}s` : 'Send Message'}
               </Button>
             </form>
           </div>
@@ -167,19 +215,24 @@ const Contact = () => {
                     </div>
                     <div>
                       <h4 className="font-semibold text-foreground">{info.title}</h4>
-                      <p className="text-accent font-medium">{info.content}</p>
+                      {info.title === 'Call Us' ? (
+                        <a href="tel:+919952491705" className="text-accent font-medium block">{info.content}</a>
+                      ) : (
+                        <p className="text-accent font-medium">{info.content}</p>
+                      )}
                       <p className="text-sm text-muted-foreground">{info.description}</p>
                     </div>
                   </div>
                 ))}
               </div>
             </div>
+
             <div className="bg-gradient-to-r from-[#2563eb] to-[#1e3a8a] text-white p-8 rounded-2xl shadow-xl">
               <h3 className="text-xl font-bold mb-4 text-center lg:text-left">Need Immediate Assistance?</h3>
               <p className="mb-6 text-white/90 text-center lg:text-left">
                 For urgent matters, call us directly for <strong>24/7 support</strong>.
               </p>
-              <a href="tel:+919952491705" className="w-full block">
+              <a href="tel:+919952491705">
                 <Button className="w-full bg-yellow-400 text-[#031273] hover:bg-yellow-500 font-semibold shadow-md">
                   <Phone className="w-4 h-4 mr-2" /> Call Now: +91 9952491705
                 </Button>
@@ -200,45 +253,17 @@ const Contact = () => {
           </p>
           <div className="max-w-3xl mx-auto space-y-4">
             {[
-              {
-                q: "How long does a typical project take?",
-                a: "Simple websites: 2-4 weeks. Complex apps: 2-6 months, depending on scope."
-              },
-              {
-                q: "Do you provide ongoing support?",
-                a: "Yes, we offer affordable maintenance & support packages."
-              },
-              {
-                q: "What’s included in your pricing?",
-                a: "Design, development, testing, deployment, and training. No hidden costs."
-              },
-              {
-                q: "Can you work with our existing systems?",
-                a: "Absolutely! We specialize in seamless system integrations."
-              }
+              { q: "How long does a typical project take?", a: "Simple websites: 2-4 weeks. Complex apps: 2-6 months, depending on scope." },
+              { q: "Do you provide ongoing support?", a: "Yes, we offer affordable maintenance & support packages." },
+              { q: "What’s included in your pricing?", a: "Design, development, testing, deployment, and training. No hidden costs." },
+              { q: "Can you work with our existing systems?", a: "Absolutely! We specialize in seamless system integrations." }
             ].map((faq, i) => (
-              <div
-                key={i}
-                className={`bg-white p-5 rounded-xl shadow-md text-left transition-all duration-300 ease-in-out ${
-                  openFAQ === i ? "scale-[1.02] shadow-lg" : ""
-                }`}
-              >
-                <button
-                  onClick={() => setOpenFAQ(openFAQ === i ? null : i)}
-                  className="flex justify-between items-center w-full font-semibold text-foreground"
-                >
+              <div key={i} className={`bg-white p-5 rounded-xl shadow-md text-left transition-all duration-300 ease-in-out ${openFAQ === i ? "scale-[1.02] shadow-lg" : ""}`}>
+                <button onClick={() => setOpenFAQ(openFAQ === i ? null : i)} className="flex justify-between items-center w-full font-semibold text-foreground">
                   {faq.q}
-                  <ChevronDown
-                    className={`w-5 h-5 transform transition-transform duration-300 ${
-                      openFAQ === i ? "rotate-180 text-primary" : ""
-                    }`}
-                  />
+                  <ChevronDown className={`w-5 h-5 transform transition-transform duration-300 ${openFAQ === i ? "rotate-180 text-primary" : ""}`} />
                 </button>
-                <div
-                  className={`grid transition-all duration-500 ease-in-out ${
-                    openFAQ === i ? "grid-rows-[1fr] opacity-100 mt-3" : "grid-rows-[0fr] opacity-0"
-                  }`}
-                >
+                <div className={`grid transition-all duration-500 ease-in-out ${openFAQ === i ? "grid-rows-[1fr] opacity-100 mt-3" : "grid-rows-[0fr] opacity-0"}`}>
                   <div className="overflow-hidden">
                     <p className="text-sm text-muted-foreground">{faq.a}</p>
                   </div>
@@ -253,3 +278,5 @@ const Contact = () => {
 };
 
 export default Contact;
+
+
