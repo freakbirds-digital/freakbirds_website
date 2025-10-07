@@ -13,7 +13,7 @@ import {
   ArrowRight,
   CheckCircle
 } from "lucide-react";
-import businessImage from "@/assets/business-3d.png"; // ✅ Replace with your actual image path
+import businessImage from "@/assets/business-3d.png"; 
 
 const Services = () => {
   const services = [
@@ -106,7 +106,6 @@ const Services = () => {
           <div className="absolute w-64 h-64 bg-white/10 rounded-full bottom-20 right-20 animate-move-reverse"></div>
           <div className="absolute w-48 h-48 bg-yellow-500/20 rounded-full top-1/3 left-1/2 animate-move-circle"></div>
         </div>
-        <div className="absolute inset-0 bg-[url('/grid.svg')] opacity-20 animate-pulse"></div>
 
         <div className="container mx-auto px-4 grid grid-cols-1 lg:grid-cols-2 gap-12 items-center relative z-10">
           {/* Left side Image with animated background */}
