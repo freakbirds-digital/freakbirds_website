@@ -13,7 +13,7 @@ import {
   Zap,
   PieChart as WorkPieChart
 } from "lucide-react";
-import StockImage from "@/assets/stock.png";
+import StockImage from "@/assets/Stock.png";
 
 const StockEducation = () => {
   const features = [
